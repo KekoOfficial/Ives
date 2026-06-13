@@ -18,7 +18,6 @@ def enviar_lista(lista):
     texto += "\n✅ Lista enviada, conteo reiniciado"
     requests.post(API_TELEGRAM, data={"chat_id": TU_CHAT_ID, "text": texto})
 
-# Cargar archivos directamente sin subcarpetas
 @app.route('/')
 def inicio():
     with open("index.html", "r", encoding="utf-8") as f:
@@ -51,5 +50,6 @@ def registrar():
     return jsonify({"ok": True, "mensaje": "✅ Registrado correctamente", "contador": len(lista_temporal)})
 
 if __name__ == '__main__':
-    print("✅ Abre en el navegador: http://localhost:5000")
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    # Usamos 0.0.0.0 para que el navegador tome mejor los permisos
+    print("✅ Abre en: http://localhost:5000")
+    app.run(host='0.0.0.0', port=5000, debug=False)
