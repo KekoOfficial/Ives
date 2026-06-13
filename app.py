@@ -1,11 +1,8 @@
 from flask import Flask, render_template, request, jsonify
-import cv2
-from pyzbar.pyzbar import decode
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import requests
 from datetime import datetime
-import threading
 
 # ---------------- CONFIGURACIÓN ----------------
 TOKEN = "8459092113:AAFFJ0b7H5gFzYjgYGk_g_57cI709dhVRhI"
@@ -17,24 +14,13 @@ CREDENCIALES = ServiceAccountCredentials.from_json_keyfile_name("credenciales_go
 CLIENTE_GOOGLE = gspread.authorize(CREDENCIALES)
 HOJA = CLIENTE_GOOGLE.open("Inventario Productos").sheet1
 
-CATEGORIAS = {
-    "1": "Perfume",
-    "2": "Crema",
-    "3": "Maquillaje",
-    "4": "Líquido"
-}
-
+CATEGORIAS = ["Perfume", "Crema", "Maquillaje", "Líquido"]
 lista_temporal = []
 LIMITE = 10
+
 app = Flask(__name__)
 
 # ---------------- FUNCIONES ----------------
-def escanear_desde_imagen(imagen):
-    codigos = decode(imagen)
-    if codigos:
-        return codigos[0].data.decode("utf-8").strip()
-    return None
-
 def guardar_en_google(fecha, codigo, tipo):
     HOJA.append_row([fecha, codigo, tipo])
 
@@ -54,11 +40,11 @@ def index():
 def registrar():
     global lista_temporal
     datos = request.get_json()
-    codigo = datos.get('codigo', '')
+    codigo = datos.get('codigo', '').strip()
     tipo = datos.get('tipo', '')
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-    if not codigo or tipo not in CATEGORIAS.values():
+    if not codigo or tipo not in CATEGORIAS:
         return jsonify({"ok": False, "mensaje": "Datos inválidos"})
 
     guardar_en_google(fecha, codigo, tipo)
@@ -67,11 +53,11 @@ def registrar():
     if len(lista_temporal) >= LIMITE:
         enviar_lista_telegram(lista_temporal)
         lista_temporal = []
-        return jsonify({"ok": True, "mensaje": f"Registrado. Lista completa enviada ✅", "contador": 0})
+        return jsonify({"ok": True, "mensaje": "✅ Lista completa enviada a Telegram", "contador": 0})
 
-    return jsonify({"ok": True, "mensaje": f"Registrado correctamente", "contador": len(lista_temporal)})
+    return jsonify({"ok": True, "mensaje": "✅ Registrado correctamente", "contador": len(lista_temporal)})
 
 # ---------------- INICIO ----------------
 if __name__ == '__main__':
-    print("✅ Sistema iniciado en: http://localhost:5000")
+    print("✅ Sistema corriendo en: http://localhost:5000")
     app.run(host='0.0.0.0', port=5000, debug=False)
