@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Productos</title>
-    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="/estilos.css">
     <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
 
         <div class="panel">
             <h2>📸 Escanear Código</h2>
-            <video id="camara" autoplay playsinline></video>
+            <video id="camara" autoplay playsinline muted></video>
             <canvas id="lienzo" style="display:none;"></canvas>
             <div class="controles">
                 <button id="btnAbrir" class="boton verde">Abrir Cámara</button>
@@ -47,16 +47,29 @@
             const lienzo = document.getElementById('lienzo');
             const ctx = lienzo.getContext('2d');
 
-            document.getElementById('btnAbrir').addEventListener('click', async () => {
+            async function abrirCamara() {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
                     video.srcObject = stream;
                     document.getElementById('btnEscanear').disabled = false;
-                    document.getElementById('codigoLeido').textContent = "Cámara lista, apunte al código";
+                    document.getElementById('codigoLeido').textContent = "✅ Cámara lista";
                 } catch (err) {
-                    document.getElementById('codigoLeido').textContent = "❌ No se pudo acceder a la cámara";
+                    document.getElementById('codigoLeido').textContent = "❌ No se pudo acceder: " + err.message;
+                    // Si falla la cámara trasera, intenta con la frontal
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        video.srcObject = stream;
+                        document.getElementById('btnEscanear').disabled = false;
+                        document.getElementById('codigoLeido').textContent = "✅ Cámara frontal activa";
+                    } catch (err2) {
+                        document.getElementById('codigoLeido').textContent = "❌ Permiso denegado. Actívalo en ajustes.";
+                    }
                 }
-            });
+            }
+
+            document.getElementById('btnAbrir').addEventListener('click', abrirCamara);
 
             document.getElementById('btnEscanear').addEventListener('click', () => {
                 if (!video.srcObject) return;
