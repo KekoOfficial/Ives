@@ -6,9 +6,8 @@
 }
 
 body {
-    background-color: #f4f6f9;
-    color: #2d3748;
-    line-height: 1.6;
+    background: #f8fafc;
+    color: #1e293b;
 }
 
 .contenedor {
@@ -18,82 +17,61 @@ body {
 }
 
 header {
-    background: #ffffff;
+    background: white;
     padding: 1.2rem;
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     text-align: center;
-    margin-bottom: 1.5rem;
-    border-left: 4px solid #2b6cb0;
+    margin-bottom: 1rem;
+    border-left: 4px solid #2563eb;
 }
 
 header h1 {
-    color: #2b6cb0;
     font-size: 1.4rem;
-    margin-bottom: 0.3rem;
+    color: #1e40af;
 }
 
 .enlaces {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .boton {
-    padding: 0.7rem 1.2rem;
     border: none;
     border-radius: 8px;
-    font-size: 0.95rem;
+    padding: 0.7rem 1.3rem;
+    font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
+    transition: all 0.15s ease;
     text-decoration: none;
     display: inline-block;
     margin: 0.3rem;
-    transition: all 0.2s ease;
 }
 
-.boton.enlace {
-    background: #2b6cb0;
-    color: white;
-}
-
-.boton.verde {
-    background: #38a169;
-    color: white;
-}
-
-.boton.azul {
-    background: #3182ce;
-    color: white;
-}
-
-.boton.azul:disabled {
-    background: #a0aec0;
-    cursor: not-allowed;
-}
-
-.boton.naranja {
-    background: #ed8936;
-    color: white;
-    width: 100%;
-}
+.boton.azul { background: #2563eb; color: white; }
+.boton.verde { background: #16a34a; color: white; }
+.boton.gris { background: #94a3b8; color: white; }
+.boton.tipo { background: #f59e0b; color: white; width: 100%; }
+.boton:hover { filter: brightness(1.08); }
 
 .panel {
-    background: #ffffff;
+    background: white;
     padding: 1.5rem;
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
     text-align: center;
 }
 
-/* Tamaño reducido de la cámara */
-.camara-contenedor {
-    width: 100%;
-    max-width: 320px;
-    height: 240px;
+/* Marco pequeño para enfocar */
+.marco-camara {
+    width: 280px;
+    height: 200px;
     margin: 1rem auto;
-    border: 2px solid #2b6cb0;
+    border: 2px solid #2563eb;
     border-radius: 8px;
+    position: relative;
     overflow: hidden;
     background: #000;
 }
@@ -104,39 +82,43 @@ header h1 {
     object-fit: cover;
 }
 
+.guia {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #00ff00;
+    font-size: 1.5rem;
+    font-weight: bold;
+    pointer-events: none;
+}
+
 .resultado {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 500;
-    padding: 0.8rem;
-    background: #f7fafc;
+    padding: 0.9rem;
+    background: #f0f9ff;
     border-radius: 8px;
     margin: 0.8rem 0;
 }
 
-.oculto {
-    display: none !important;
-}
+.oculto { display: none !important; }
 
 .opciones {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
     gap: 0.8rem;
     margin: 1.2rem 0;
 }
 
 .estado {
-    font-size: 1rem;
+    color: #15803d;
     font-weight: 500;
-    color: #2f855a;
     margin: 0.8rem 0;
-    padding: 0.6rem;
-    background: #f0fff4;
-    border-radius: 8px;
 }
 
 .contador {
-    font-size: 1rem;
     font-weight: bold;
-    color: #2b6cb0;
-    margin-top: 0.8rem;
+    color: #2563eb;
+    margin-top: 0.5rem;
 }
