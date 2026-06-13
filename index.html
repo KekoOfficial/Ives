@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Productos</title>
+    <link rel="stylesheet" href="estilos.css">
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+    <div class="contenedor">
+        <header>
+            <h1>📦 SISTEMA DE INVENTARIO</h1>
+            <p>Escaneo, clasificación y envío automático</p>
+        </header>
+
+        <div class="enlaces">
+            <a href="https://www.google.com" target="_blank" class="boton enlace">🌐 Ir a Google</a>
+        </div>
+
+        <div class="panel">
+            <h2>📸 Escanear Código</h2>
+            <video id="camara" autoplay playsinline></video>
+            <canvas id="lienzo" style="display:none;"></canvas>
+            <div class="controles">
+                <button id="btnAbrir" class="boton verde">Abrir Cámara</button>
+                <button id="btnEscanear" class="boton azul" disabled>Escanear</button>
+            </div>
+            <div id="codigoLeido" class="resultado">Código: —</div>
+        </div>
+
+        <div id="panelTipo" class="panel oculto">
+            <h3>📋 Seleccione el tipo de producto</h3>
+            <div class="opciones">
+                <button onclick="enviar('Perfume')" class="boton naranja">Perfume</button>
+                <button onclick="enviar('Crema')" class="boton naranja">Crema</button>
+                <button onclick="enviar('Maquillaje')" class="boton naranja">Maquillaje</button>
+                <button onclick="enviar('Líquido')" class="boton naranja">Líquido</button>
+            </div>
+            <div id="estado" class="estado"></div>
+            <div class="contador">Productos en lista: <span id="contador">0</span>/10</div>
+        </div>
+
+        <script>
+            let codigoActual = "";
+            const video = document.getElementById('camara');
+            const lienzo = document.getElementById('lienzo');
+            const ctx = lienzo.getContext('2d');
+
+            document.getElementById('btnAbrir').addEventListener('click', async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = stream;
+                    document.getElementById('btnEscanear').disabled = false;
+                    document.getElementById('codigoLeido').textContent = "Cámara lista, apunte al código";
+                } catch (err) {
+                    document.getElementById('codigoLeido').textContent = "❌ No se pudo acceder a la cámara";
+                }
+            });
+
+            document.getElementById('btnEscanear').addEventListener('click', () => {
+                if (!video.srcObject) return;
+                lienzo.width = video.videoWidth;
+                lienzo.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, lienzo.width, lienzo.height);
+                const datos = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
+                const resultado = jsQR(datos.data, lienzo.width, lienzo.height);
+
+                if (resultado) {
+                    codigoActual = resultado.data.trim();
+                    document.getElementById('codigoLeido').textContent = `✅ Código: ${codigoActual}`;
+                    document.getElementById('panelTipo').classList.remove('oculto');
+                } else {
+                    document.getElementById('codigoLeido').textContent = "❌ No se detectó código";
+                }
+            });
+
+            async function enviar(tipo) {
+                if (!codigoActual) return;
+                const respuesta = await fetch('/registrar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ codigo: codigoActual, tipo: tipo })
+                });
+                const datos = await respuesta.json();
+                document.getElementById('estado').textContent = datos.mensaje;
+                document.getElementById('contador').textContent = datos.contador;
+                codigoActual = "";
+                document.getElementById('codigoLeido').textContent = "Código: —";
+                setTimeout(() => document.getElementById('estado').textContent = "", 3000);
+            }
+        </script>
+    </div>
+</body>
+</html>
