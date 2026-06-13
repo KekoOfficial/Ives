@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario de Productos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+    <div class="contenedor-principal">
+        <header class="cabecera">
+            <h1>📦 SISTEMA DE REGISTRO DE PRODUCTOS</h1>
+            <p>Escaneo, clasificación y control automático</p>
+        </header>
+
+        <div class="enlaces-rapidos">
+            <a href="https://sheets.google.com" target="_blank" class="boton enlace">📊 Ir a Google Sheets</a>
+            <a href="https://google.com" target="_blank" class="boton enlace">🌐 Acceso a Google</a>
+        </div>
+
+        <div class="panel-escaneo">
+            <h2>📸 Escanear Código</h2>
+            <video id="camara" autoplay playsinline></video>
+            <canvas id="lienzo" style="display: none;"></canvas>
+            <div class="controles">
+                <button id="btnAbrir" class="boton accion">Abrir Cámara</button>
+                <button id="btnEscanear" class="boton accion" disabled>Escanear</button>
+            </div>
+            <div id="codigoLeido" class="resultado">Código: —</div>
+        </div>
+
+        <div class="panel-clasificacion" id="panelTipo" style="display: none;">
+            <h3>📋 Seleccione el tipo de producto</h3>
+            <div class="opciones">
+                <button onclick="enviarRegistro('Perfume')" class="boton tipo">Perfume</button>
+                <button onclick="enviarRegistro('Crema')" class="boton tipo">Crema</button>
+                <button onclick="enviarRegistro('Maquillaje')" class="boton tipo">Maquillaje</button>
+                <button onclick="enviarRegistro('Líquido')" class="boton tipo">Líquido</button>
+            </div>
+            <div id="estado" class="estado"></div>
+            <div class="contador">Productos en lista: <span id="contador">0</span>/10</div>
+        </div>
+    </div>
+
+    <script>
+        let codigoActual = "";
+        const video = document.getElementById('camara');
+        const lienzo = document.getElementById('lienzo');
+        const ctx = lienzo.getContext('2d');
+
+        document.getElementById('btnAbrir').addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+                document.getElementById('btnEscanear').disabled = false;
+                document.getElementById('codigoLeido').textContent = "Cámara lista";
+            } catch (err) {
+                document.getElementById('codigoLeido').textContent = "❌ Error al acceder a la cámara";
+            }
+        });
+
+        document.getElementById('btnEscanear').addEventListener('click', () => {
+            if (!video.srcObject) return;
+            lienzo.width = video.videoWidth;
+            lienzo.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, lienzo.width, lienzo.height);
+            const datos = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
+            const resultado = jsQR(datos.data, lienzo.width, lienzo.height);
+
+            if (resultado) {
+                codigoActual = resultado.data.trim();
+                document.getElementById('codigoLeido').textContent = `✅ Código: ${codigoActual}`;
+                document.getElementById('panelTipo').style.display = "block";
+            } else {
+                document.getElementById('codigoLeido').textContent = "❌ No se detectó código";
+            }
+        });
+
+        async function enviarRegistro(tipo) {
+            if (!codigoActual) return;
+            const respuesta = await fetch('/registrar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ codigo: codigoActual, tipo: tipo })
+            });
+            const datos = await respuesta.json();
+            document.getElementById('estado').textContent = datos.mensaje;
+            document.getElementById('contador').textContent = datos.contador;
+            codigoActual = "";
+            document.getElementById('codigoLeido').textContent = "Código: —";
+            setTimeout(() => document.getElementById('estado').textContent = "", 3000);
+        }
+    </script>
+</body>
+</html>
