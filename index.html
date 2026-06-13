@@ -3,110 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Productos</title>
+    <title>Inventario Rápido</title>
     <link rel="stylesheet" href="/estilos.css">
-    <!-- Librería que lee códigos de barras y QR -->
-    <script src="https://unpkg.com/@zxing/library@latest/umd/index.js"></script>
+    <!-- Lector ligero y rápido solo para códigos de barras -->
+    <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 </head>
 <body>
     <div class="contenedor">
         <header>
             <h1>📦 SISTEMA DE INVENTARIO</h1>
-            <p>Escaneo, clasificación y envío automático</p>
+            <p>Escaneo rápido y clasificación</p>
         </header>
 
         <div class="enlaces">
-            <a href="https://www.google.com" target="_blank" class="boton enlace">🌐 Ir a Google</a>
+            <a href="https://sheets.google.com" target="_blank" class="boton azul">📊 Ir a Google</a>
         </div>
 
         <div class="panel">
             <h2>📸 Escanear Código</h2>
-            <!-- Tamaño reducido para enfocar mejor -->
-            <div class="camara-contenedor">
+            <!-- Recuadro pequeño y fijo -->
+            <div class="marco-camara">
                 <video id="camara" autoplay playsinline muted></video>
+                <div class="guia">▭▭▭▭▭▭▭</div>
             </div>
-            <canvas id="lienzo" style="display:none;"></canvas>
-            
+
             <div class="controles">
                 <button id="btnAbrir" class="boton verde">Abrir Cámara</button>
-                <button id="btnEscanear" class="boton azul" disabled>Escanear</button>
+                <button id="btnDetener" class="boton gris" style="display:none;">Detener</button>
             </div>
+
             <div id="codigoLeido" class="resultado">Código: —</div>
         </div>
 
         <div id="panelTipo" class="panel oculto">
-            <h3>📋 Seleccione el tipo de producto</h3>
+            <h3>📋 Seleccione tipo</h3>
             <div class="opciones">
-                <button onclick="enviar('Perfume')" class="boton naranja">Perfume</button>
-                <button onclick="enviar('Crema')" class="boton naranja">Crema</button>
-                <button onclick="enviar('Maquillaje')" class="boton naranja">Maquillaje</button>
-                <button onclick="enviar('Líquido')" class="boton naranja">Líquido</button>
+                <button onclick="enviar('Perfume')" class="boton tipo">Perfume</button>
+                <button onclick="enviar('Crema')" class="boton tipo">Crema</button>
+                <button onclick="enviar('Maquillaje')" class="boton tipo">Maquillaje</button>
+                <button onclick="enviar('Líquido')" class="boton tipo">Líquido</button>
             </div>
             <div id="estado" class="estado"></div>
-            <div class="contador">Productos en lista: <span id="contador">0</span>/10</div>
+            <div class="contador">En lista: <span id="contador">0</span>/10</div>
         </div>
 
         <script>
             let codigoActual = "";
-            let codigoLector = null;
-            const video = document.getElementById('camara');
+            let lector = null;
+            let activo = false;
 
-            async function abrirCamara() {
+            // Solo leer códigos de barras lineales (los de números)
+            const formatosPermitidos = [
+                ZXing.BarcodeFormat.CODE_128,
+                ZXing.BarcodeFormat.CODE_39,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.UPC_A,
+                ZXing.BarcodeFormat.UPC_E,
+                ZXing.BarcodeFormat.ITF
+            ];
+
+            async function iniciarEscaneo() {
+                if (activo) return;
+                activo = true;
+                codigoActual = "";
+                document.getElementById('codigoLeido').textContent = "📡 Apunte el código al recuadro";
+
                 try {
-                    // Iniciar lector de códigos
-                    codigoLector = new ZXing.BrowserMultiFormatReader();
-                    
-                    // Tamaño reducido y cámara trasera
+                    lector = new ZXing.BrowserMultiFormatReader();
+                    lector.timeBetweenDecodingAttempts = 200; // Más rápido
+                    lector.hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formatosPermitidos);
+
                     const stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: "environment",
-                            width: { ideal: 640 },
-                            height: { ideal: 360 }
-                        }
-                    });
-                    video.srcObject = stream;
-
-                    // Escaneo automático continuo
-                    codigoLector.decodeFromVideoDevice(null, 'camara', (resultado, error) => {
-                        if (resultado) {
-                            codigoActual = resultado.text.trim();
-                            document.getElementById('codigoLeido').textContent = `✅ Código: ${codigoActual}`;
-                            document.getElementById('panelTipo').classList.remove('oculto');
-                        }
-                        if (error && !(error instanceof ZXing.NotFoundException)) {
-                            document.getElementById('codigoLeido').textContent = "❌ No se detectó código";
-                        }
+                        video: { facingMode: "environment", width: 480, height: 360 }
                     });
 
-                    document.getElementById('btnEscanear').disabled = false;
-                    document.getElementById('codigoLeido').textContent = "✅ Apunte el código al recuadro";
+                    document.getElementById('camara').srcObject = stream;
+                    document.getElementById('btnAbrir').style.display = "none";
+                    document.getElementById('btnDetener').style.display = "inline-block";
 
-                } catch (err) {
-                    document.getElementById('codigoLeido').textContent = "❌ Permiso denegado o error: " + err.message;
+                    lector.decodeFromVideoDevice(null, 'camara', (res, err) => {
+                        if (res) {
+                            const texto = res.text.trim();
+                            // Solo aceptar si es todo números
+                            if (/^\d+$/.test(texto)) {
+                                codigoActual = texto;
+                                document.getElementById('codigoLeido').innerHTML = `✅ Código: <strong>${codigoActual}</strong>`;
+                                document.getElementById('panelTipo').classList.remove('oculto');
+                                detenerEscaneo();
+                            }
+                        }
+                    });
+
+                } catch (e) {
+                    activo = false;
+                    document.getElementById('codigoLeido').textContent = "❌ Error: Permiso denegado";
                 }
             }
 
-            document.getElementById('btnAbrir').addEventListener('click', abrirCamara);
+            function detenerEscaneo() {
+                if (lector) lector.reset();
+                const stream = document.getElementById('camara').srcObject;
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                activo = false;
+                document.getElementById('btnAbrir').style.display = "inline-block";
+                document.getElementById('btnDetener').style.display = "none";
+            }
 
             async function enviar(tipo) {
                 if (!codigoActual) return;
-                
-                const respuesta = await fetch('/registrar', {
+                const resp = await fetch('/registrar', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ codigo: codigoActual, tipo: tipo })
                 });
-                const datos = await respuesta.json();
-                
+                const datos = await resp.json();
                 document.getElementById('estado').textContent = datos.mensaje;
                 document.getElementById('contador').textContent = datos.contador;
-                
-                // Limpiar para siguiente
-                codigoActual = "";
-                document.getElementById('codigoLeido').textContent = "✅ Listo para nuevo código";
                 document.getElementById('panelTipo').classList.add('oculto');
-                setTimeout(() => document.getElementById('estado').textContent = "", 3000);
+                document.getElementById('codigoLeido').textContent = "✅ Listo para escanear otro";
+                setTimeout(() => document.getElementById('estado').textContent = "", 2500);
             }
+
+            document.getElementById('btnAbrir').addEventListener('click', iniciarEscaneo);
+            document.getElementById('btnDetener').addEventListener('click', detenerEscaneo);
         </script>
     </div>
 </body>
