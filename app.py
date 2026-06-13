@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
 import requests
 from datetime import datetime
 from config import API_TELEGRAM, TU_CHAT_ID, CATEGORIAS, LIMITE
@@ -6,24 +6,28 @@ from config import API_TELEGRAM, TU_CHAT_ID, CATEGORIAS, LIMITE
 app = Flask(__name__)
 lista_temporal = []
 
-# Guardar en archivo local
 def guardar_local(fecha, codigo, tipo):
     with open("inventario.txt", "a", encoding="utf-8") as f:
         f.write(f"{fecha} | {codigo} | {tipo}\n")
 
-# Enviar lista a Telegram
 def enviar_lista(lista):
     texto = "📦 LISTA DE PRODUCTOS (10 unidades)\n"
-    texto += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    texto += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     for i, item in enumerate(lista, 1):
         texto += f"{i}. Código: {item['codigo']} | Tipo: {item['tipo']} | {item['fecha']}\n"
     texto += "\n✅ Lista enviada, conteo reiniciado"
     requests.post(API_TELEGRAM, data={"chat_id": TU_CHAT_ID, "text": texto})
 
-# Rutas
+# Cargar archivos directamente sin subcarpetas
 @app.route('/')
 def inicio():
-    return render_template('index.html')
+    with open("index.html", "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.route('/estilos.css')
+def css():
+    with open("estilos.css", "r", encoding="utf-8") as f:
+        return f.read(), 200, {'Content-Type': 'text/css'}
 
 @app.route('/registrar', methods=['POST'])
 def registrar():
@@ -47,5 +51,5 @@ def registrar():
     return jsonify({"ok": True, "mensaje": "✅ Registrado correctamente", "contador": len(lista_temporal)})
 
 if __name__ == '__main__':
-    print("✅ Sistema corriendo en: http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    print("✅ Abre en el navegador: http://localhost:5000")
+    app.run(host='127.0.0.1', port=5000, debug=False)
