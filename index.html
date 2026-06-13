@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Productos</title>
     <link rel="stylesheet" href="/estilos.css">
-    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- Librería que lee códigos de barras y QR -->
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.js"></script>
 </head>
 <body>
     <div class="contenedor">
@@ -20,8 +21,12 @@
 
         <div class="panel">
             <h2>📸 Escanear Código</h2>
-            <video id="camara" autoplay playsinline muted></video>
+            <!-- Tamaño reducido para enfocar mejor -->
+            <div class="camara-contenedor">
+                <video id="camara" autoplay playsinline muted></video>
+            </div>
             <canvas id="lienzo" style="display:none;"></canvas>
+            
             <div class="controles">
                 <button id="btnAbrir" class="boton verde">Abrir Cámara</button>
                 <button id="btnEscanear" class="boton azul" disabled>Escanear</button>
@@ -43,63 +48,63 @@
 
         <script>
             let codigoActual = "";
+            let codigoLector = null;
             const video = document.getElementById('camara');
-            const lienzo = document.getElementById('lienzo');
-            const ctx = lienzo.getContext('2d');
 
             async function abrirCamara() {
                 try {
+                    // Iniciar lector de códigos
+                    codigoLector = new ZXing.BrowserMultiFormatReader();
+                    
+                    // Tamaño reducido y cámara trasera
                     const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                        video: {
+                            facingMode: "environment",
+                            width: { ideal: 640 },
+                            height: { ideal: 360 }
+                        }
                     });
                     video.srcObject = stream;
+
+                    // Escaneo automático continuo
+                    codigoLector.decodeFromVideoDevice(null, 'camara', (resultado, error) => {
+                        if (resultado) {
+                            codigoActual = resultado.text.trim();
+                            document.getElementById('codigoLeido').textContent = `✅ Código: ${codigoActual}`;
+                            document.getElementById('panelTipo').classList.remove('oculto');
+                        }
+                        if (error && !(error instanceof ZXing.NotFoundException)) {
+                            document.getElementById('codigoLeido').textContent = "❌ No se detectó código";
+                        }
+                    });
+
                     document.getElementById('btnEscanear').disabled = false;
-                    document.getElementById('codigoLeido').textContent = "✅ Cámara lista";
+                    document.getElementById('codigoLeido').textContent = "✅ Apunte el código al recuadro";
+
                 } catch (err) {
-                    document.getElementById('codigoLeido').textContent = "❌ No se pudo acceder: " + err.message;
-                    // Si falla la cámara trasera, intenta con la frontal
-                    try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                        video.srcObject = stream;
-                        document.getElementById('btnEscanear').disabled = false;
-                        document.getElementById('codigoLeido').textContent = "✅ Cámara frontal activa";
-                    } catch (err2) {
-                        document.getElementById('codigoLeido').textContent = "❌ Permiso denegado. Actívalo en ajustes.";
-                    }
+                    document.getElementById('codigoLeido').textContent = "❌ Permiso denegado o error: " + err.message;
                 }
             }
 
             document.getElementById('btnAbrir').addEventListener('click', abrirCamara);
 
-            document.getElementById('btnEscanear').addEventListener('click', () => {
-                if (!video.srcObject) return;
-                lienzo.width = video.videoWidth;
-                lienzo.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, lienzo.width, lienzo.height);
-                const datos = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
-                const resultado = jsQR(datos.data, lienzo.width, lienzo.height);
-
-                if (resultado) {
-                    codigoActual = resultado.data.trim();
-                    document.getElementById('codigoLeido').textContent = `✅ Código: ${codigoActual}`;
-                    document.getElementById('panelTipo').classList.remove('oculto');
-                } else {
-                    document.getElementById('codigoLeido').textContent = "❌ No se detectó código";
-                }
-            });
-
             async function enviar(tipo) {
                 if (!codigoActual) return;
+                
                 const respuesta = await fetch('/registrar', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ codigo: codigoActual, tipo: tipo })
                 });
                 const datos = await respuesta.json();
+                
                 document.getElementById('estado').textContent = datos.mensaje;
                 document.getElementById('contador').textContent = datos.contador;
+                
+                // Limpiar para siguiente
                 codigoActual = "";
-                document.getElementById('codigoLeido').textContent = "Código: —";
+                document.getElementById('codigoLeido').textContent = "✅ Listo para nuevo código";
+                document.getElementById('panelTipo').classList.add('oculto');
                 setTimeout(() => document.getElementById('estado').textContent = "", 3000);
             }
         </script>
