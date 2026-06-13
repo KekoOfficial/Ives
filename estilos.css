@@ -53,7 +53,7 @@ header h1 {
 .boton.verde { background: #16a34a; color: white; }
 .boton.gris { background: #94a3b8; color: white; }
 .boton.tipo { background: #f59e0b; color: white; width: 100%; }
-.boton:hover { filter: brightness(1.08); }
+.boton:active { transform: scale(0.98); }
 
 .panel {
     background: white;
@@ -64,7 +64,6 @@ header h1 {
     text-align: center;
 }
 
-/* Marco pequeño para enfocar */
 .marco-camara {
     width: 280px;
     height: 200px;
@@ -94,12 +93,16 @@ header h1 {
 }
 
 .resultado {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 500;
     padding: 0.9rem;
     background: #f0f9ff;
     border-radius: 8px;
     margin: 0.8rem 0;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .oculto { display: none !important; }
