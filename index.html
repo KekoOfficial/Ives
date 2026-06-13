@@ -2,11 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario Rápido</title>
     <link rel="stylesheet" href="/estilos.css">
-    <!-- Librería más ligera y probada -->
-    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <!-- Librería simple, ligera, sin errores -->
+    <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 </head>
 <body>
     <div class="contenedor">
@@ -50,8 +50,8 @@
             let codigoActual = "";
             let lector = null;
 
-            // Solo formatos de códigos con números
-            const formatos = [
+            // Solo códigos de barras con números
+            const formatosPermitidos = [
                 ZXing.BarcodeFormat.EAN_13,
                 ZXing.BarcodeFormat.EAN_8,
                 ZXing.BarcodeFormat.UPC_A,
@@ -63,13 +63,13 @@
             async function iniciarCamara() {
                 try {
                     detenerCamara();
-                    document.getElementById('codigoLeido').textContent = "🔄 Solicitando permiso...";
+                    document.getElementById('codigoLeido').textContent = "🔄 Iniciando...";
 
-                    // Forzar cámara trasera y resolución óptima
+                    // La cámara la pide el NAVEGADOR, no Termux
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: {
-                            facingMode: { exact: "environment" },
-                            width: { ideal: 640 },
+                            facingMode: "environment",
+                            width: { ideal: 480 },
                             height: { ideal: 360 }
                         },
                         audio: false
@@ -80,14 +80,14 @@
                     document.getElementById('btnAbrir').style.display = "none";
                     document.getElementById('btnDetener').style.display = "inline-block";
 
-                    // Configurar escaneo rápido
+                    // Configuración sin errores
                     lector = new ZXing.BrowserMultiFormatReader();
-                    lector.timeBetweenDecodingAttempts = 150; // Más rápido
-                    lector.hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formatos);
+                    lector.timeBetweenDecodingAttempts = 200;
 
                     lector.decodeFromVideoDevice(null, 'camara', (resultado, error) => {
                         if (resultado) {
                             const texto = resultado.text.trim();
+                            // Solo aceptar números
                             if (/^\d+$/.test(texto)) {
                                 codigoActual = texto;
                                 document.getElementById('codigoLeido').innerHTML = `✅ Código: <strong>${codigoActual}</strong>`;
@@ -98,8 +98,7 @@
                     });
 
                 } catch (err) {
-                    console.error(err);
-                    document.getElementById('codigoLeido').innerHTML = `❌ Error: ${err.message}<br>ℹ️ Asegurate de aceptar permisos en Ajustes > Aplicaciones > Termux > Permisos > Cámara: Permitir`;
+                    document.getElementById('codigoLeido').innerHTML = `❌ Error: ${err.message}<br>ℹ️ Permití la cámara cuando el NAVEGADOR te lo pida`;
                 }
             }
 
