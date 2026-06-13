@@ -2,17 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Inventario Rápido</title>
     <link rel="stylesheet" href="/estilos.css">
-    <!-- Lector ligero y rápido solo para códigos de barras -->
-    <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+    <!-- Librería más ligera y probada -->
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 </head>
 <body>
     <div class="contenedor">
         <header>
             <h1>📦 SISTEMA DE INVENTARIO</h1>
-            <p>Escaneo rápido y clasificación</p>
+            <p>Escaneo rápido y seguro</p>
         </header>
 
         <div class="enlaces">
@@ -21,7 +21,6 @@
 
         <div class="panel">
             <h2>📸 Escanear Código</h2>
-            <!-- Recuadro pequeño y fijo -->
             <div class="marco-camara">
                 <video id="camara" autoplay playsinline muted></video>
                 <div class="guia">▭▭▭▭▭▭▭</div>
@@ -32,7 +31,7 @@
                 <button id="btnDetener" class="boton gris" style="display:none;">Detener</button>
             </div>
 
-            <div id="codigoLeido" class="resultado">Código: —</div>
+            <div id="codigoLeido" class="resultado">Estado: Listo</div>
         </div>
 
         <div id="panelTipo" class="panel oculto">
@@ -50,62 +49,64 @@
         <script>
             let codigoActual = "";
             let lector = null;
-            let activo = false;
 
-            // Solo leer códigos de barras lineales (los de números)
-            const formatosPermitidos = [
+            // Solo formatos de códigos con números
+            const formatos = [
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.UPC_A,
                 ZXing.BarcodeFormat.CODE_128,
                 ZXing.BarcodeFormat.CODE_39,
-                ZXing.BarcodeFormat.EAN_8,
-                ZXing.BarcodeFormat.EAN_13,
-                ZXing.BarcodeFormat.UPC_A,
-                ZXing.BarcodeFormat.UPC_E,
                 ZXing.BarcodeFormat.ITF
             ];
 
-            async function iniciarEscaneo() {
-                if (activo) return;
-                activo = true;
-                codigoActual = "";
-                document.getElementById('codigoLeido').textContent = "📡 Apunte el código al recuadro";
-
+            async function iniciarCamara() {
                 try {
-                    lector = new ZXing.BrowserMultiFormatReader();
-                    lector.timeBetweenDecodingAttempts = 200; // Más rápido
-                    lector.hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formatosPermitidos);
+                    detenerCamara();
+                    document.getElementById('codigoLeido').textContent = "🔄 Solicitando permiso...";
 
+                    // Forzar cámara trasera y resolución óptima
                     const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "environment", width: 480, height: 360 }
+                        video: {
+                            facingMode: { exact: "environment" },
+                            width: { ideal: 640 },
+                            height: { ideal: 360 }
+                        },
+                        audio: false
                     });
 
                     document.getElementById('camara').srcObject = stream;
+                    document.getElementById('codigoLeido').textContent = "✅ Apunte el código al recuadro";
                     document.getElementById('btnAbrir').style.display = "none";
                     document.getElementById('btnDetener').style.display = "inline-block";
 
-                    lector.decodeFromVideoDevice(null, 'camara', (res, err) => {
-                        if (res) {
-                            const texto = res.text.trim();
-                            // Solo aceptar si es todo números
+                    // Configurar escaneo rápido
+                    lector = new ZXing.BrowserMultiFormatReader();
+                    lector.timeBetweenDecodingAttempts = 150; // Más rápido
+                    lector.hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formatos);
+
+                    lector.decodeFromVideoDevice(null, 'camara', (resultado, error) => {
+                        if (resultado) {
+                            const texto = resultado.text.trim();
                             if (/^\d+$/.test(texto)) {
                                 codigoActual = texto;
                                 document.getElementById('codigoLeido').innerHTML = `✅ Código: <strong>${codigoActual}</strong>`;
                                 document.getElementById('panelTipo').classList.remove('oculto');
-                                detenerEscaneo();
+                                detenerCamara();
                             }
                         }
                     });
 
-                } catch (e) {
-                    activo = false;
-                    document.getElementById('codigoLeido').textContent = "❌ Error: Permiso denegado";
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById('codigoLeido').innerHTML = `❌ Error: ${err.message}<br>ℹ️ Asegurate de aceptar permisos en Ajustes > Aplicaciones > Termux > Permisos > Cámara: Permitir`;
                 }
             }
 
-            function detenerEscaneo() {
+            function detenerCamara() {
                 if (lector) lector.reset();
                 const stream = document.getElementById('camara').srcObject;
                 if (stream) stream.getTracks().forEach(t => t.stop());
-                activo = false;
                 document.getElementById('btnAbrir').style.display = "inline-block";
                 document.getElementById('btnDetener').style.display = "none";
             }
@@ -121,12 +122,13 @@
                 document.getElementById('estado').textContent = datos.mensaje;
                 document.getElementById('contador').textContent = datos.contador;
                 document.getElementById('panelTipo').classList.add('oculto');
-                document.getElementById('codigoLeido').textContent = "✅ Listo para escanear otro";
+                codigoActual = "";
+                document.getElementById('codigoLeido').textContent = "✅ Listo para nuevo código";
                 setTimeout(() => document.getElementById('estado').textContent = "", 2500);
             }
 
-            document.getElementById('btnAbrir').addEventListener('click', iniciarEscaneo);
-            document.getElementById('btnDetener').addEventListener('click', detenerEscaneo);
+            document.getElementById('btnAbrir').addEventListener('click', iniciarCamara);
+            document.getElementById('btnDetener').addEventListener('click', detenerCamara);
         </script>
     </div>
 </body>
